@@ -30,10 +30,14 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+import org.apache.commons.io.IOUtils;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
 public class NetworkOperations {
 	
 	/**Change URL and strablish the appropiate*/
-	public static final String MAIN_URL = "http://192.168.1.135/elgg/";
+	public static final String MAIN_URL = "http://192.168.0.12/elgg/services/api/rest/json/?method=auth.gettoken";
 	
 	private static NetworkOperations networkOp;
 	private static DefaultHttpClient httpclient;
@@ -80,53 +84,30 @@ public class NetworkOperations {
 			
 			try{
 				
-				HttpGet httpget = new HttpGet(MAIN_URL);
 
-	            HttpResponse response = httpclient.execute(httpget);
-	            HttpEntity entity = response.getEntity();
-
-	            EntityUtils.consume(entity);
-
-	            cookies = httpclient.getCookieStore().getCookies();
-                for (int i = 0; i < cookies.size(); i++) {
-                	if(cookies.get(i).getName().contentEquals("elggperm"))
-                		if(cookies.get(i).getExpiryDate().after( new Date()))
-                			return true;
-                }
-
-	            System.out.println("Initial set of cookies:");
-	            cookies = httpclient.getCookieStore().getCookies();
 	            
-	            if (cookies.isEmpty()) {
-	                System.out.println("None");
-	            } else {
-	                for (int i = 0; i < cookies.size(); i++) {
-	                    System.out.println("- " + cookies.get(i).toString());
-	                }
-	            }
-	            
-	            HttpPost httpPost = new HttpPost(MAIN_URL+"/action/login");
+	            HttpPost httpPost = new HttpPost(MAIN_URL);
 
 	            List <NameValuePair> nvps = new ArrayList <NameValuePair>();
 	            nvps.add(new BasicNameValuePair("username", username));
 	            nvps.add(new BasicNameValuePair("password", password));
-	            nvps.add(new BasicNameValuePair("persistent", "true"));
+
 
 	            httpPost.setEntity(new UrlEncodedFormEntity(nvps));
 	            httpPost.setEntity(new UrlEncodedFormEntity(nvps, Consts.UTF_8));
 
-	            response = httpclient.execute(httpPost);
-	            entity = response.getEntity();
+                HttpResponse response = httpclient.execute(httpPost);
+                HttpEntity  entity = response.getEntity();
 	            
-	            EntityUtils.consume(entity);
-		            
-	            cookies = httpclient.getCookieStore().getCookies();
-                for (int i = 0; i < cookies.size(); i++) {
-                	if(cookies.get(i).getName().contentEquals("elggperm"))
-                		if(cookies.get(i).getExpiryDate().after( new Date()))
-                			return true;
-                }
+	           // EntityUtils.consume(entity);
 
+                JSONTokener tok = new JSONTokener( IOUtils.toString(response.getEntity().getContent()) );
+                JSONObject object =  (JSONObject) tok.nextValue();
+
+
+                if(object.getString("status").equals("0"))
+                			return true;
+                else
                 return false;
 			}
 			catch(Exception e)
